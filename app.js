@@ -21,7 +21,9 @@ app.use(cookieParser());
 
 // Allow CORS from any origin (wide-open). Remove or restrict in production if needed.
 app.use(cors({ origin: true, credentials: true }));
-
+app.get('/', (req, res) => {
+  res.send('Hello World');
+});
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/categories", categoryRouter);
 app.use("/api/v1/products", productRouter);
