@@ -1,6 +1,6 @@
 const dotenv = require("dotenv");
 dotenv.config({ path: "./.env" });
-require("./DB/connectionDB");
+const { connectDB } = require("./DB/connectionDB"); // لاحظ: نستورد الدالة فقط
 const cookieParser = require("cookie-parser");
 const cors = require('cors');
 const userRouter = require("./routes/user.routes");
@@ -18,7 +18,11 @@ if (process.env.NODE_ENV === "development") app.use(morgan("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-
+connectDB()
+  .then(() => console.log("DB Connection Successfully"))
+  .catch((err) => {
+    console.error("DB connection error (will not crash app):", err);
+  });
 // Allow CORS from any origin (wide-open). Remove or restrict in production if needed.
 app.use(cors({ origin: true, credentials: true }));
 app.get('/', (req, res) => {
