@@ -21,15 +21,38 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // Allow CORS for specific origin in production for security
-app.use(
-  cors({
-    origin: [
-      "https://e-commerce-freelance-frontend-gpxky2wr6-abdoelsaeeds-projects.vercel.app",
-      "http://localhost:5173",
-    ],
-    credentials: true,
-  })
-);
+// قبل استخدامه تأكد إنك ضفت ALLOWED_ORIGINS في Railway أو استخدم القيم هنا مؤقتًا
+const rawAllowed = 'https://e-commerce-freelance-frontend-gpxky2wr6-abdoelsaeeds-projects.vercel.app,http://localhost:5173';
+
+const allowedOrigins = rawAllowed
+  .split(',')
+  .map(s => s.trim().replace(/\/+$/,'')) // remove trailing slashes
+  .filter(Boolean);
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    // allow direct server-to-server or curl (no origin)
+    if (!origin) return callback(null, true);
+
+    // allow in non-production to simplify dev
+    if (process.env.NODE_ENV !== 'production') return callback(null, true);
+
+    const cleaned = origin.replace(/\/+$/,'');
+    if (allowedOrigins.includes(cleaned)) {
+      return callback(null, true);
+    }
+
+    console.warn('CORS blocked origin:', origin);
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization','X-Requested-With']
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+
 
 
 app.use("/api/v1/users", userRouter);
