@@ -36,7 +36,8 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 // Safe handling for preflight (OPTIONS) requests
-app.options("*", cors(corsOptions));
+// Use '/*' instead of '*' to avoid path-to-regexp parsing issues in some environments
+app.options("/*", cors(corsOptions));
 
 // ------------------- ROUTES -------------------
 app.use("/api/v1/users", userRouter);
