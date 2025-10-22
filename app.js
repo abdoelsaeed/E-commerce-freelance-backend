@@ -25,6 +25,7 @@ app.use(cookieParser());
 
 // ------------------- CORS Configuration -------------------
 const rawAllowed =
+  process.env.ALLOWED_ORIGINS ||
   "https://e-commerce-freelance-frontend-gpxky2wr6-abdoelsaeeds-projects.vercel.app,http://localhost:5173";
 
 const allowedOrigins = rawAllowed
