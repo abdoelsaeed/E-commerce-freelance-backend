@@ -23,13 +23,14 @@ app.use(cookieParser());
 // Allow CORS for specific origin in production for security
 app.use(
   cors({
-    origin:
-      process.env.NODE_ENV === "production"
-        ? "https://your-frontend.vercel.app"
-        : true,
+    origin: [
+      "https://e-commerce-freelance-frontend-gpxky2wr6-abdoelsaeeds-projects.vercel.app/",
+      "http://localhost:5173",
+    ],
     credentials: true,
   })
 );
+
 
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/categories", categoryRouter);
