@@ -24,46 +24,19 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // ------------------- CORS Configuration -------------------
-const rawAllowed =
-  process.env.ALLOWED_ORIGINS ||
-  "https://e-commerce-freelance-frontend-gpxky2wr6-abdoelsaeeds-projects.vercel.app,http://localhost:5173";
-
-const allowedOrigins = rawAllowed
-  .split(",")
-  .map((s) => s.trim().replace(/\/+$/, "")) // remove trailing slashes
-  .filter(Boolean);
-
+// مؤقتًا للسماح بأي Origin لتجنب مشاكل CORS أثناء التطوير أو الاختبار
 const corsOptions = {
-  origin: function (origin, callback) {
-    // allow requests with no origin (like curl, Postman)
-    if (!origin) return callback(null, true);
-
-    // allow all origins in dev
-    if (process.env.NODE_ENV !== "production") return callback(null, true);
-
-    const cleaned = origin.replace(/\/+$/, "");
-    if (allowedOrigins.includes(cleaned)) {
-      return callback(null, true);
-    }
-
-    console.warn("❌ CORS blocked origin:", origin);
-    return callback(new Error("Not allowed by CORS"));
-  },
+  origin: true, // السماح لأي origin
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
 };
 
-// Apply main CORS middleware
+// Apply CORS middleware
 app.use(cors(corsOptions));
 
 // Safe handling for preflight (OPTIONS) requests
-app.use((req, res, next) => {
-  if (req.method === "OPTIONS") {
-    return cors(corsOptions)(req, res, () => res.sendStatus(204));
-  }
-  next();
-});
+app.options("*", cors(corsOptions));
 
 // ------------------- ROUTES -------------------
 app.use("/api/v1/users", userRouter);
