@@ -25,6 +25,8 @@ app.use(cookieParser());
 
 // ------------------- CORS Configuration -------------------
 // مؤقتًا للسماح بأي Origin لتجنب مشاكل CORS أثناء التطوير أو الاختبار
+app.set("trust proxy", 1);
+
 const corsOptions = {
   origin: true, // السماح لأي origin
   credentials: true,
@@ -35,8 +37,17 @@ const corsOptions = {
 // Apply CORS middleware
 app.use(cors(corsOptions));
 
-// Safe handling for preflight (OPTIONS) requests
-app.options("*", cors(corsOptions));
+// Safe handling for preflight (OPTIONS) requests without registering a
+// wildcard route (which path-to-regexp may attempt to parse and fail on).
+// We handle OPTIONS requests with middleware so Express doesn't register
+// a route pattern like '*' that the router's path parser chokes on.
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    // Use CORS to set headers for preflight and end the request with 204
+    return cors(corsOptions)(req, res, () => res.sendStatus(204));
+  }
+  next();
+});
 
 // ------------------- ROUTES -------------------
 app.use("/api/v1/users", userRouter);

@@ -15,16 +15,19 @@ exports.uploadBufferToCloudinary = function (buffer, folder) {
     });
     streamifier.createReadStream(buffer).pipe(stream);
   });
-}
+};
 
 exports.signup = catchAsync(async (req, res, next) => {
   const body = req.body;
   if (req.file) {
-    const uploaded = await exports.uploadBufferToCloudinary(req.file.buffer, "users");
+    const uploaded = await exports.uploadBufferToCloudinary(
+      req.file.buffer,
+      "users"
+    );
     body.photo = uploaded.secure_url;
     body.photoPublicId = uploaded.public_id;
   }
-  const { firstName,lastName, email, phone, password } = body;
+  const { firstName, lastName, email, phone, password } = body;
   if (!password || !email || !lastName || !firstName || !phone) {
     return next(
       new AppError("Please provide email, password ,phone and name", 400)
@@ -35,12 +38,13 @@ exports.signup = catchAsync(async (req, res, next) => {
     expiresIn: process.env.JWT_EXPIRES_IN,
   });
   res.cookie("jwt", token, {
-    expiresIn: new Date(
+    expires: new Date(
       Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000
     ),
-    secure: true,
     httpOnly: true,
-    secure: req.secure || req.header("x-forwarded-proto") === "https",
+    secure: process.env.NODE_ENV === "production", // يحتاج HTTPS
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    path: "/",
   });
   user.password = undefined;
   res.status(201).json({
@@ -51,7 +55,6 @@ exports.signup = catchAsync(async (req, res, next) => {
     },
   });
 });
-
 
 exports.logIn = catchAsync(async (req, res, next) => {
   const { email, password } = req.body;
@@ -72,12 +75,13 @@ exports.logIn = catchAsync(async (req, res, next) => {
   }
 
   res.cookie("jwt", token, {
-    expiresIn: new Date(
+    expires: new Date(
       Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000
     ),
-    secure: true,
     httpOnly: true,
-    secure: req.secure || req.header("x-forwarded-proto") === "https",
+    secure: process.env.NODE_ENV === "production", // يحتاج HTTPS
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    path: "/",
   });
   user.password = undefined;
   res.status(200).json({
@@ -116,7 +120,6 @@ exports.protect = catchAsync(async (req, res, next) => {
   }
   //2)Verification token
   const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
-  
 
   //3)check if user still exists يعني مامسحش الاكونت مثلا
   const currentUser = await User.findById(decoded.id);
@@ -156,13 +159,20 @@ exports.getMe = catchAsync(async (req, res, next) => {
   });
 });
 exports.createUser = catchAsync(async (req, res, next) => {
-  const { firstName,lastName, email, phone, password } = req.body;
+  const { firstName, lastName, email, phone, password } = req.body;
   if (!firstName || !lastName || !email || !phone || !password) {
     return next(new AppError("Please provide all required fields", 400));
   }
-  const user = await User.create({ firstName,lastName, email, phone, password,role:"admin" });
+  const user = await User.create({
+    firstName,
+    lastName,
+    email,
+    phone,
+    password,
+    role: "admin",
+  });
   res.status(201).json({
     status: "success",
-    data: user ,
+    data: user,
   });
 });
