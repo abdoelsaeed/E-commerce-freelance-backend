@@ -24,7 +24,7 @@ app.use(cookieParser());
 app.use(
   cors({
     origin: [
-      "https://e-commerce-freelance-frontend-gpxky2wr6-abdoelsaeeds-projects.vercel.app/",
+      "https://e-commerce-freelance-frontend-gpxky2wr6-abdoelsaeeds-projects.vercel.app",
       "http://localhost:5173",
     ],
     credentials: true,
