@@ -3,6 +3,8 @@ const router = express.Router();
 const orderController = require("../controller/orders.controller");
 const authController = require("../controller/auth.controller");
 
+router.post("/guest", orderController.createGuestOrder);
+
 // Protected routes (for authenticated users)
 router.use(authController.protect);
 

@@ -34,6 +34,10 @@ const orderSchema = new mongoose.Schema(
       ref: "User",
       required: false, // يمكن أن يكون NULL للعملاء غير المسجلين
     },
+    is_guest:{
+      type: Boolean,
+      default: false
+    },
     customer_name: {
       type: String,
       required: [true, "Customer name is required"],

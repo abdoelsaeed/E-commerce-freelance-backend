@@ -1,12 +1,94 @@
 const mongoose = require("mongoose");
 const Order = require("../models/orders.Model");
 const Product = require("../models/product.Model");
-const User = require("../models/user.Model");
 const catchAsync = require("../error/catchAsyn");
 const AppError = require("../error/err");
 const Cart = require("../models/cart.Model");
 
-// Create a new order with transaction/session
+// Create a new order with transaction/session for guests
+exports.createGuestOrder = catchAsync(async (req, res, next) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    let { customer_name, customer_phone, address, orderItems } = req.body;
+
+    if (!Array.isArray(orderItems) || orderItems.length === 0) {
+      throw new AppError("orderItems must be a non-empty array", 400);
+    }
+    if (!customer_name || !customer_phone || !address) {
+      throw new AppError(
+        "Please provide customer_name, customer_phone, and address",
+        400
+      );
+    }
+
+    // Validate each item and decrement stock inside session
+    let total = 0;
+    for (const item of orderItems) {
+      const { productId, quantity = 1, color, size } = item;
+      if (!productId || !color || !size) {
+        throw new AppError(
+          "Each order item must include productId, color and size",
+          400
+        );
+      }
+      const product = await Product.findById(productId).session(session);
+      
+      if (!product) throw new AppError(`Product ${productId} not found`, 400);
+
+      const variantIndex = product.variants.findIndex(
+        (v) => v.color === color && v.size === size
+      );
+      if (variantIndex === -1) throw new AppError("Variant not found", 400);
+
+      if (product.variants[variantIndex].quantity < quantity) {
+        throw new AppError(
+          `Not enough stock for ${product.name} in ${color}/${size}`,
+          400
+        );
+      }
+
+      product.variants[variantIndex].quantity -= quantity;
+      await product.save({ session });
+
+      total += (product.price || 0) * quantity;
+    }
+
+    const orderData = {
+      user_id: null,
+      is_guest: true,
+      customer_name,
+      customer_phone,
+      address,
+      orderItems: orderItems.map((i) => ({
+        productId: i.productId,
+        quantity: i.quantity || 1,
+        color: i.color,
+        size: i.size,
+      })),
+      totalPrice: total,
+    };
+
+    const orderArr = await Order.create([orderData], { session });
+    const order = orderArr[0];
+
+    await session.commitTransaction();
+    session.endSession();
+
+    await order.populate("orderItems.productId", "name price imageCover");
+
+    res.status(201).json({
+      status: "success",
+      data: { order },
+    });
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    next(err);
+  }
+});
+
+// Create a new order with transaction/session for users logged in
 exports.createOrder = catchAsync(async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
