@@ -106,7 +106,7 @@ await cart.populate("cartItems.productId");
 // Remove item from cart
 exports.removeFromCart = catchAsync(async (req, res, next) => {
   const userId = req.user.id;
-  const { productId } = req.body;
+  const { productId } = req.params;
 
   if (!productId) {
     return next(new AppError("Product ID is required", 400));
