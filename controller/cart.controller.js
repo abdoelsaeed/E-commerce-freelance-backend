@@ -102,3 +102,58 @@ await cart.populate("cartItems.productId");
         data: { cart },
     });
 });
+
+// Remove item from cart
+exports.removeFromCart = catchAsync(async (req, res, next) => {
+  const userId = req.user.id;
+  const { productId } = req.body;
+
+  if (!productId) {
+    return next(new AppError("Product ID is required", 400));
+  }
+
+  const cart = await Cart.findOne({ user_id: userId });
+  if (!cart) {
+    return next(new AppError('Cart not found', 404));
+  }
+
+  // Remove item(s) with matching productId
+  const initialLength = cart.cartItems.length;
+  cart.cartItems = cart.cartItems.filter(
+    item => item.productId.toString() !== productId
+  );
+
+  if (cart.cartItems.length === initialLength) {
+    return next(new AppError('Product not found in cart', 404));
+  }
+
+  // Update total price
+  await cart.populate("cartItems.productId");
+  cart.totalPrice = cart.cartItems.reduce((sum, it) => {
+    const price = it.productId?.price || 0;
+    return sum + price * it.quantity;
+  }, 0);
+
+  await cart.save();
+
+  res.status(200).json({
+    status: 'success',
+    message: 'Item removed from cart',
+    data: { cart }
+  });
+});
+
+// Clear all items from the cart
+exports.clearCart = catchAsync(async (req, res, next) => {
+  const userId = req.user.id;
+  const cart = await Cart.findOne({ user_id: userId });
+  if (!cart) {
+    return next(new AppError('Cart not found', 404));
+  }
+
+  cart.cartItems = [];
+  cart.totalPrice = 0;
+  await cart.save();
+
+  res.status(200).json({ status: 'success', message: 'Cart cleared', data: { cart } });
+});
