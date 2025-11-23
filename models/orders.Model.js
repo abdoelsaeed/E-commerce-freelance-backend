@@ -86,30 +86,34 @@ const orderSchema = new mongoose.Schema(
 
 // Middleware to validate color and size against product variants
 orderSchema.pre("save", async function (next) {
-  let total = 0;
-  for (const item of this.orderItems) {
-    const product = await mongoose.model("Product").findById(item.productId);
-    if (!product) {
-      throw new Error(`Product ${item.productId} not found`);
-    }
-    // Check if the color/size combination exists in product variants
-    const validVariant = product.variants.find(
-      (v) => v.color === item.color && v.size === item.size
-    );
-    if (!validVariant) {
-      throw new Error(
-        `Invalid color/size combination for product ${product.name}`
+  // Only validate stock and recalculate total when creating new order or when orderItems are modified
+  if (this.isNew || this.isModified("orderItems")) {
+    let total = 0;
+    for (const item of this.orderItems) {
+      const product = await mongoose.model("Product").findById(item.productId);
+      if (!product) {
+        throw new Error(`Product ${item.productId} not found`);
+      }
+      // Check if the color/size combination exists in product variants
+      const validVariant = product.variants.find(
+        (v) => v.color === item.color && v.size === item.size
       );
+      if (!validVariant) {
+        throw new Error(
+          `Invalid color/size combination for product ${product.name}`
+        );
+      }
+      // Check if enough quantity is available (only for new orders)
+      // For existing orders, stock was already validated and decremented when order was created
+      if (this.isNew && validVariant.quantity < item.quantity) {
+        throw new Error(
+          `Not enough stock for ${product.name} in ${item.color}/${item.size}`
+        );
+      }
+      total += (product.price || 0) * item.quantity;
     }
-    // Check if enough quantity is available
-    if (validVariant.quantity < item.quantity) {
-      throw new Error(
-        `Not enough stock for ${product.name} in ${item.color}/${item.size}`
-      );
-    }
-    total += (product.price || 0) * item.quantity;
+    this.totalPrice = total;
   }
-  this.totalPrice = total;
   next();
 });
 
